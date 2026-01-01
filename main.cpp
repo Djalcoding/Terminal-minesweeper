@@ -1,10 +1,16 @@
+#include "lib/inputUtils.h"
 #include "src/graphics.h"
 #include "src/grid.h"
-#include <iostream>
+#include <unistd.h>
 
 int main() {
     graphics::initialize_locales();
-    Grid grid(30,16,99);
-    std::wcout << graphics::build_grid(30,16,*grid.getGrid());
+    Grid grid(9, 9, 10);
+    graphics::Screen screen;
+    auto frame = graphics::build_grid(&grid);
+    bool running = true;
+    while (running) {
+        screen.draw(frame);
+    }
     return 0;
 }

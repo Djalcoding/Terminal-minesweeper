@@ -1,0 +1,2 @@
+char linux_getch() ;
+

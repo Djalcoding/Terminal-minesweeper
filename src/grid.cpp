@@ -57,3 +57,12 @@ void Grid::incrementAroundBomb(int x, int y) {
 }
 
 std::vector<std::vector<GridElement>> *Grid::getGrid() { return &this->grid; }
+
+
+int Grid::get_height() {
+    return this->height;
+}
+
+int Grid::get_width() {
+    return this->width;
+}

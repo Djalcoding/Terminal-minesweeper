@@ -2,6 +2,8 @@
 #include <cstddef>
 #include <optional>
 #include <vector>
+#pragma once
+
 class Grid {
   private:
     int width;
@@ -18,5 +20,10 @@ class Grid {
         fillWithBombs(bombCount);
     }
 
-    std::vector<std::vector<GridElement>>* getGrid();
+    std::vector<std::vector<GridElement>> *getGrid();
+    int get_height();
+    int get_width();
+    std::pair<int, int> getCursorPositionInGrid(int x, int y) {
+        return {4*(x)+3,2*(y+1)};
+    }
 };

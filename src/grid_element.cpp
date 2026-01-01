@@ -1,5 +1,4 @@
 #include "grid_element.h"
-#include <iostream>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -29,7 +28,7 @@ std::unordered_map<int, std::wstring> numbers_to_color_map = {
 };
 
 GridElement::GridElement()
-    : type(GridType::NUMBER), state(GridState::DISCOVERED), number({0}) {}
+    : type(GridType::NUMBER), state(GridState::UNDISCOVERED), number({0}) {}
 
 void GridElement::setNumber(int value) {
     if (type != GridType::NUMBER) {

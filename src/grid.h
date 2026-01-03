@@ -21,9 +21,12 @@ class Grid {
     }
 
     std::vector<std::vector<GridElement>> *getGrid();
+    std::vector<std::wstring> draw_grid();
     int get_height();
     int get_width();
     std::pair<int, int> getCursorPositionInGrid(int x, int y) {
         return {4*(x)+3,2*(y+1)};
     }
+
+    bool discover(int x, int y);
 };

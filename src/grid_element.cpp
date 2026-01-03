@@ -51,6 +51,9 @@ void GridElement::setType(GridType type) {
     this->type = type;
 }
 
+bool GridElement::discovered() {
+    return this->state == GridState::DISCOVERED;
+}
 bool GridElement::isBomb() { return this->type == GridType::BOMB; }
 
 std::wstring GridElement::getSymbol() {

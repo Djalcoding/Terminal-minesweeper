@@ -6,6 +6,10 @@
 #include <ostream>
 #include <string>
 #include <sys/types.h>
+#include <termios.h>
+#include <thread>
+#include <unistd.h>
+#include <utility>
 #include <vector>
 
 void graphics::initialize_locales() {
@@ -18,93 +22,43 @@ void graphics::initialize_locales() {
     setlocale(LC_ALL, locale_name);
     std::locale::global(std::locale(locale_name));
     std::wcout.imbue(std::locale());
+    std::wcin.imbue(std::locale());
 #endif
 }
 
-constexpr wchar_t left_side = L'┣';
-constexpr wchar_t left_corner = L'┏';
-constexpr wchar_t bottom_left_corner = L'┗';
-
-constexpr wchar_t right_side = L'┫';
-constexpr wchar_t right_corner = L'┓';
-constexpr wchar_t bottom_right_corner = L'┛';
-
-constexpr wchar_t horizontal_line = L'━';
-constexpr wchar_t vertical_line = L'┃';
-constexpr wchar_t caret = L'╋';
-constexpr wchar_t top_caret = L'┳';
-constexpr wchar_t bottom_caret = L'┻';
-
-const std::wstring empty_space = L"\e[0;0m ";
-
-std::vector<std::wstring> graphics::build_grid(Grid *grid) {
-    std::vector<std::wstring> output_grid;
-    std::vector<GridElement> flattened_elements =
-        vectorUtils::flatten(*grid->getGrid());
-    int width = grid->get_width();
-    int heigth = grid->get_height();
-    std::vector<GridElement>::iterator flattened_iterator =
-        flattened_elements.begin();
-    width *= 2;
-    heigth *= 2;
-    for (int y = 0; y <= heigth; y++) {
-        std::wstring output_string;
-        for (int x = 0; x <= width; x++) {
-            if (y % 2 && x % 2) {
-                output_string.append(empty_space);
-                if (flattened_iterator != flattened_elements.end()) {
-                    output_string.append(flattened_iterator->getSymbol());
-                    flattened_iterator++;
-                } else {
-                    output_string.append(empty_space);
-                }
-                output_string.append(empty_space);
-            } else if (x == 0) {
-                if (y == 0)
-                    output_string.push_back(left_corner);
-                else if (y % 2) {
-                    output_string.push_back(vertical_line);
-                } else
-                    output_string.push_back(y == heigth ? bottom_left_corner
-                                                        : left_side);
-            } else if (x == width) {
-                if (y == 0)
-                    output_string.push_back(right_corner);
-                else if (y % 2) {
-                    output_string.push_back(vertical_line);
-                } else
-                    output_string.push_back(y == heigth ? bottom_right_corner
-                                                        : right_side);
-            } else {
-                if (x % 2) {
-                    output_string.push_back(horizontal_line);
-                    output_string.push_back(horizontal_line);
-                    output_string.push_back(horizontal_line);
-                } else if (y == 0) {
-                    output_string.push_back(top_caret);
-                } else if (y == heigth)
-                    output_string.push_back(bottom_caret);
-                else if (y % 2) {
-                    output_string.push_back(vertical_line);
-                } else
-                    output_string.push_back(caret);
-            }
-        }
-        output_grid.push_back(output_string);
+void graphics::Screen::fully_redraw(std::vector<std::wstring> &frame) {
+    erase_screen();
+    move_cursor_to_start();
+    for (std::wstring &line : frame) {
+        std::wcout << line;
+        move_to_start_of_next_line();
     }
-
-    return output_grid;
 }
 
 void graphics::Screen::draw(std::vector<std::wstring> &frame) {
-    move_cursor_to_start();
-    hide_cursor();
+    std::pair<int,int> current_dimensions = get_dimensions();
+    if (this->dimensions != current_dimensions) {
+        this->dimensions = current_dimensions;
+        fully_redraw(frame);
+        return;
+    }
+    bool moved_to_start = false;
+    int jump_size = 0;
     for (unsigned int i = 0; i < frame.size(); i++) {
         if (this->current_frame.size() > i &&
             this->current_frame[i] == frame[i]) {
+            jump_size++;
         } else {
+            if (!moved_to_start) {
+                moved_to_start = true;
+                move_cursor_to_start();
+                hide_cursor();
+            }
+            if (jump_size > 0)
+                move_to_start_of_next_line(jump_size);
             erase_line();
             std::wcout << frame[i];
+            jump_size = 0;
         }
         move_to_start_of_next_line();
     }
@@ -115,7 +69,13 @@ void graphics::Screen::move_to_start_of_next_line() {
     std::wcout << "\033[1E" << std::flush;
 }
 
+void graphics::Screen::move_to_start_of_next_line(unsigned int jump) {
+    std::wstring jump_size = std::to_wstring(jump);
+    std::wcout << (L"\033[" + jump_size + L"E") << std::flush;
+}
+
 void graphics::Screen::erase_line() { std::wcout << "\033[2K" << std::flush; }
+void graphics::Screen::erase_screen() { std::wcout << "\033[2J" << std::flush; }
 
 void graphics::Screen::move_cursor_to_start() { move_cursor_to(1, 1); }
 
@@ -131,7 +91,7 @@ void graphics::Screen::move_cursor_to(int x, int y) {
     move_cursor_to(x, y, false);
 }
 
-void graphics::Screen::move_cursor_to(std::pair<int,int> pos, bool show) {
+void graphics::Screen::move_cursor_to(std::pair<int, int> pos, bool show) {
     move_cursor_to(pos.first, pos.second, show);
 }
 
@@ -140,7 +100,8 @@ void graphics::Screen::move_cursor_to(int x, int y, bool show) {
     std::wstring yComponent = std::to_wstring(y);
     std::wcout << (L"\033[" + yComponent + L";" + xComponent + L"H")
                << std::flush;
-    if (show) show_cursor();
+    if (show)
+        show_cursor();
 }
 
 void graphics::Screen::enter_alternate_buffer() {
@@ -149,4 +110,54 @@ void graphics::Screen::enter_alternate_buffer() {
 
 void graphics::Screen::exit_alternate_buffer() {
     std::wcout << L"\033[?1049l" << std::flush;
+}
+
+std::pair<int, int> graphics::Screen::get_cursor_position() {
+    char buf[30] = {0};
+    int ret, i, pow;
+    char ch;
+    int x = 0;
+    int y = 0;
+    struct termios term, restore;
+
+    tcgetattr(0, &term);
+    tcgetattr(0, &restore);
+    term.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(0, TCSANOW, &term);
+
+    write(1, "\033[6n", 4);
+
+    for (i = 0, ch = 0; ch != 'R'; i++) {
+        ret = read(0, &ch, 1);
+        if (!ret) {
+            tcsetattr(0, TCSANOW, &restore);
+            fprintf(stderr, "getpos: error reading response!\n");
+            return {-1, -1};
+        }
+        buf[i] = ch;
+        printf("buf[%d]: \t%c \t%d\n", i, ch, ch);
+    }
+
+    if (i < 2) {
+        tcsetattr(0, TCSANOW, &restore);
+        printf("i < 2\n");
+        return {-1, -1};
+    }
+
+    for (i -= 2, pow = 1; buf[i] != ';'; i--, pow *= 10)
+        x = x + (buf[i] - '0') * pow;
+
+    for (i--, pow = 1; buf[i] != '['; i--, pow *= 10)
+        y = y + (buf[i] - '0') * pow;
+
+    tcsetattr(0, TCSANOW, &restore);
+    return {x, y};
+}
+
+std::pair<int,int> graphics::Screen::get_dimensions() {
+    std::pair<int,int> startPos = get_cursor_position();
+    move_cursor_to(99999,99999);
+    std::pair<int,int> dimensions = get_cursor_position();
+    move_cursor_to(startPos, false);
+    return dimensions;
 }

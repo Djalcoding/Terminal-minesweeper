@@ -4,6 +4,7 @@
 #include <iostream>
 #include <ostream>
 #include <unistd.h>
+#include <thread>
 
 int main() {
     graphics::initialize_locales();
@@ -11,13 +12,10 @@ int main() {
     bool running = true;
     int i = 0;
     int j = 0;
-    std::wcout << L"\033[=3h" << std::flush;
     grid.discover(i, j);
     graphics::Screen screen;
-    std::pair<int, int> dimension;
-    while (running) {
-        auto frame = grid.draw_grid();
-        screen.draw(frame);
-    }
+    auto frame = grid.draw_grid();
+    screen.draw(frame);
+
     return 0;
 }

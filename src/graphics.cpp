@@ -3,6 +3,7 @@
 #include "grid_element.h"
 #include <iostream>
 #include <locale>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <sys/types.h>
@@ -26,17 +27,22 @@ void graphics::initialize_locales() {
 #endif
 }
 
-void graphics::Screen::fully_redraw(std::vector<std::wstring> &frame) {
+void graphics::Terminal::restore_terminal() {
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+}
+
+void graphics::Terminal::fully_redraw(std::vector<std::wstring> &frame) {
     erase_screen();
     move_cursor_to_start();
     for (std::wstring &line : frame) {
         std::wcout << line;
         move_to_start_of_next_line();
     }
+    std::wcout << std::flush;
 }
 
-void graphics::Screen::draw(std::vector<std::wstring> &frame) {
-    std::pair<int,int> current_dimensions = get_dimensions();
+void graphics::Terminal::draw(std::vector<std::wstring> &frame) {
+    std::pair<int, int> current_dimensions = get_dimensions();
     if (this->dimensions != current_dimensions) {
         this->dimensions = current_dimensions;
         fully_redraw(frame);
@@ -63,39 +69,42 @@ void graphics::Screen::draw(std::vector<std::wstring> &frame) {
         move_to_start_of_next_line();
     }
     this->current_frame = frame;
+    std::wcout << std::flush;
 }
 
-void graphics::Screen::move_to_start_of_next_line() {
+void graphics::Terminal::move_to_start_of_next_line() {
     std::wcout << "\033[1E" << std::flush;
 }
 
-void graphics::Screen::move_to_start_of_next_line(unsigned int jump) {
+void graphics::Terminal::move_to_start_of_next_line(unsigned int jump) {
     std::wstring jump_size = std::to_wstring(jump);
     std::wcout << (L"\033[" + jump_size + L"E") << std::flush;
 }
 
-void graphics::Screen::erase_line() { std::wcout << "\033[2K" << std::flush; }
-void graphics::Screen::erase_screen() { std::wcout << "\033[2J" << std::flush; }
+void graphics::Terminal::erase_line() { std::wcout << "\033[2K" << std::flush; }
+void graphics::Terminal::erase_screen() {
+    std::wcout << "\033[2J" << std::flush;
+}
 
-void graphics::Screen::move_cursor_to_start() { move_cursor_to(1, 1); }
+void graphics::Terminal::move_cursor_to_start() { move_cursor_to(1, 1); }
 
-void graphics::Screen::hide_cursor() {
+void graphics::Terminal::hide_cursor() {
     std::wcout << "\033[?25l" << std::flush;
 }
 
-void graphics::Screen::show_cursor() {
+void graphics::Terminal::show_cursor() {
     std::wcout << "\033[?25h" << std::flush;
 }
 
-void graphics::Screen::move_cursor_to(int x, int y) {
+void graphics::Terminal::move_cursor_to(int x, int y) {
     move_cursor_to(x, y, false);
 }
 
-void graphics::Screen::move_cursor_to(std::pair<int, int> pos, bool show) {
+void graphics::Terminal::move_cursor_to(std::pair<int, int> pos, bool show) {
     move_cursor_to(pos.first, pos.second, show);
 }
 
-void graphics::Screen::move_cursor_to(int x, int y, bool show) {
+void graphics::Terminal::move_cursor_to(int x, int y, bool show) {
     std::wstring xComponent = std::to_wstring(x);
     std::wstring yComponent = std::to_wstring(y);
     std::wcout << (L"\033[" + yComponent + L";" + xComponent + L"H")
@@ -104,15 +113,15 @@ void graphics::Screen::move_cursor_to(int x, int y, bool show) {
         show_cursor();
 }
 
-void graphics::Screen::enter_alternate_buffer() {
+void graphics::Terminal::enter_alternate_buffer() {
     std::wcout << L"\033[?1049h" << std::flush;
 }
 
-void graphics::Screen::exit_alternate_buffer() {
+void graphics::Terminal::exit_alternate_buffer() {
     std::wcout << L"\033[?1049l" << std::flush;
 }
 
-std::pair<int, int> graphics::Screen::get_cursor_position() {
+std::pair<int, int> graphics::Terminal::get_cursor_position() {
     char buf[30] = {0};
     int ret, i, pow;
     char ch;
@@ -154,10 +163,18 @@ std::pair<int, int> graphics::Screen::get_cursor_position() {
     return {x, y};
 }
 
-std::pair<int,int> graphics::Screen::get_dimensions() {
-    std::pair<int,int> startPos = get_cursor_position();
-    move_cursor_to(99999,99999);
-    std::pair<int,int> dimensions = get_cursor_position();
+std::pair<int, int> graphics::Terminal::get_dimensions() {
+    std::pair<int, int> startPos = get_cursor_position();
+    move_cursor_to(99999, 99999);
+    std::pair<int, int> dimensions = get_cursor_position();
     move_cursor_to(startPos, false);
     return dimensions;
+}
+
+std::optional<char> graphics::Terminal::read_current_char() {
+    char c;
+    if (read(STDIN_FILENO, &c, 1) == -1) {
+        return {};
+    }
+    return {c};
 }

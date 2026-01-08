@@ -1,32 +1,37 @@
 #include "inputUtils.h"
-#include <cstdio>
 #include <unistd.h>
 #include <termios.h>
+#include <iostream>
+
+void restore_terminal(termios& oldt){
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+}
+
+void sigint(termios& oldt){
+    restore_terminal(oldt);
+    exit(0);
+}
+
+
 
 char linux_getch() {
-    char buf = 0;
-    struct termios old = {0};
-    if (tcgetattr(0, &old) < 0)
-        perror("tcsetattr");
+    char ch = 0;
 
-    // Disable canonical mode and echo
-    old.c_lflag &= ~ICANON;
-    old.c_lflag &= ~ECHO;
-    old.c_cc[VMIN] = 1;
-    old.c_cc[VTIME] = 0;
+    struct termios oldt, newt;
 
-    if (tcsetattr(0, TCSANOW, &old) < 0)
-        perror("tcsetattr ICANON");
+    if(tcgetattr(STDIN_FILENO, &oldt) == -1){
+        return 0;
+    }
 
-    // Read one character
-    if (read(0, &buf, 1) < 0)
-        perror("read");
+    newt = oldt;
 
-    // Restore terminal settings
-    old.c_lflag |= ICANON;
-    old.c_lflag |= ECHO;
-    if (tcsetattr(0, TCSADRAIN, &old) < 0)
-        perror("tcsetattr ~ICANON");
+    newt.c_lflag &= ~(ICANON | ECHO);
 
-    return buf;
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &newt) == -1) {
+        return 0; 
+    }
+
+    restore_terminal(oldt);
+
+    return ch;
 }

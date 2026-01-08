@@ -1,6 +1,9 @@
+#include <atomic>
+#include <functional>
 #include <optional>
-
-void start_gameloop();
-void start_keybind_thread();
-
-std::optional<char> current_char;
+#include <thread>
+#include "graphics.h"
+namespace gameloop {
+    void start_gameloop(std::atomic<bool> *, graphics::Terminal* ,std::function<void()>);
+    std::thread keybind_thread(std::atomic<bool> *,  graphics::Terminal* terminal);
+} // namespace gameloop

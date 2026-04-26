@@ -15,7 +15,7 @@ const std::wstring color_black = L"\e[0;30m";
 const std::wstring color_red = L"\e[1;31m";
 const std::wstring color_high_red = L"\e[1;91m";
 
-std::unordered_map<int, std::wstring> numbers_to_color_map = {
+const std::unordered_map<int, std::wstring> numbers_to_color_map = {
     {0, color_black + L"■"},
     {1, color_blue + L"1"},
     {2, color_green + L"2"},
@@ -64,6 +64,6 @@ std::wstring GridElement::getSymbol() {
     } else if (this->type == GridType::BOMB) {
         return color_high_red + L'¤';
     } else {
-        return numbers_to_color_map[number.value()];
+        return numbers_to_color_map.at(number.value());
     }
 }

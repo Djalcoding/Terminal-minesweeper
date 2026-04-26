@@ -1,19 +1,27 @@
 #include "graphics.h"
 #include "../lib/vectorUtils.h"
-#include "grid_element.h"
+#include <asm-generic/ioctls.h>
+#include <bits/types/struct_timeval.h>
+#include <cassert>
+#include <sys/ioctl.h>
+#include <fstream>
 #include <iostream>
 #include <locale>
-#include <optional>
+#include <mutex>
 #include <ostream>
+#include <sstream>
 #include <string>
+#include <sys/select.h>
 #include <sys/types.h>
 #include <termios.h>
-#include <thread>
 #include <unistd.h>
 #include <utility>
 #include <vector>
 
-void graphics::initialize_locales() {
+extern std::ofstream tty;
+
+namespace graphics {
+void initialize_locales() {
 #if MS_STDLIB_BUGS
     constexpr char cp_utf16le[] = ".1200";
     setlocale(LC_ALL, cp_utf16le);
@@ -27,21 +35,18 @@ void graphics::initialize_locales() {
 #endif
 }
 
-void graphics::Terminal::restore_terminal() {
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-}
 
-void graphics::Terminal::fully_redraw(std::vector<std::wstring> &frame) {
+
+void Terminal::fully_redraw(const std::vector<std::wstring> &frame) {
     erase_screen();
     move_cursor_to_start();
-    for (std::wstring &line : frame) {
+    for (const std::wstring &line : frame) {
         std::wcout << line;
         move_to_start_of_next_line();
     }
     std::wcout << std::flush;
 }
-
-void graphics::Terminal::draw(std::vector<std::wstring> &frame) {
+void Terminal::draw(const std::vector<std::wstring> &frame) {
     std::pair<int, int> current_dimensions = get_dimensions();
     if (this->dimensions != current_dimensions) {
         this->dimensions = current_dimensions;
@@ -72,39 +77,40 @@ void graphics::Terminal::draw(std::vector<std::wstring> &frame) {
     std::wcout << std::flush;
 }
 
-void graphics::Terminal::move_to_start_of_next_line() {
+void Terminal::move_to_start_of_next_line() {
     std::wcout << "\033[1E" << std::flush;
 }
 
-void graphics::Terminal::move_to_start_of_next_line(unsigned int jump) {
+void Terminal::move_to_start_of_next_line(unsigned int jump) {
     std::wstring jump_size = std::to_wstring(jump);
     std::wcout << (L"\033[" + jump_size + L"E") << std::flush;
 }
 
-void graphics::Terminal::erase_line() { std::wcout << "\033[2K" << std::flush; }
-void graphics::Terminal::erase_screen() {
+void Terminal::erase_line() { std::wcout << "\033[2K" << std::flush; }
+void Terminal::erase_screen() {
     std::wcout << "\033[2J" << std::flush;
 }
 
-void graphics::Terminal::move_cursor_to_start() { move_cursor_to(1, 1); }
+void Terminal::move_cursor_to_start() { move_cursor_to(1, 1); }
 
-void graphics::Terminal::hide_cursor() {
+void Terminal::hide_cursor() {
     std::wcout << "\033[?25l" << std::flush;
 }
 
-void graphics::Terminal::show_cursor() {
+void Terminal::show_cursor() {
     std::wcout << "\033[?25h" << std::flush;
 }
 
-void graphics::Terminal::move_cursor_to(int x, int y) {
+void Terminal::move_cursor_to(int x, int y) {
     move_cursor_to(x, y, false);
 }
 
-void graphics::Terminal::move_cursor_to(std::pair<int, int> pos, bool show) {
+void Terminal::move_cursor_to(const std::pair<int, int> &pos,
+                                        bool show) {
     move_cursor_to(pos.first, pos.second, show);
 }
 
-void graphics::Terminal::move_cursor_to(int x, int y, bool show) {
+void Terminal::move_cursor_to(int x, int y, bool show) {
     std::wstring xComponent = std::to_wstring(x);
     std::wstring yComponent = std::to_wstring(y);
     std::wcout << (L"\033[" + yComponent + L";" + xComponent + L"H")
@@ -113,15 +119,80 @@ void graphics::Terminal::move_cursor_to(int x, int y, bool show) {
         show_cursor();
 }
 
-void graphics::Terminal::enter_alternate_buffer() {
+void Terminal::enter_alternate_buffer() {
     std::wcout << L"\033[?1049h" << std::flush;
 }
 
-void graphics::Terminal::exit_alternate_buffer() {
+void Terminal::exit_alternate_buffer() {
     std::wcout << L"\033[?1049l" << std::flush;
 }
 
-std::pair<int, int> graphics::Terminal::get_cursor_position() {
+void Terminal::set_canonic(bool state) {
+    if (state) {
+        currentTerminal.c_lflag |= ICANON;
+        return;
+    }
+    currentTerminal.c_lflag &= ~ICANON;
+}
+
+
+void Terminal::set_echo(bool state) {
+    if (state) {
+        currentTerminal.c_lflag |= ECHO;
+        return;
+    }
+    currentTerminal.c_lflag &= ~ECHO;
+}
+
+void Terminal::set_vmin(unsigned char val) {
+    currentTerminal.c_cc[VMIN] = val;
+}
+void Terminal::set_vtime(unsigned char val) {
+    currentTerminal.c_cc[VTIME] = val;
+}
+
+
+std::string Terminal::get_terminal_information() {
+    std::unique_lock<std::mutex> lock;
+    std::stringstream ss;
+    ss << "CANONIC : "
+       << ((currentTerminal.c_lflag & ICANON) ? "true" : "false") << '\n'
+       << "ECHO : " << ((currentTerminal.c_lflag & ECHO) ? "true" : "false")
+       << '\n'
+       << "VMIN : " << ((int)currentTerminal.c_cc[VMIN]) << '\n'
+       << "VTIME : " << ((int)currentTerminal.c_cc[VTIME]) << '\n'
+       << "Dimensions : " << dimensions.first << ", " << dimensions.second << '\n'
+       << "Current char : " << current_keypress << '\n';
+
+    return ss.str();
+}
+
+void Terminal::update_terminal_settings() {
+    tcsetattr(0, TCSANOW, &currentTerminal);
+}
+
+void Terminal::update_keypress() {
+    if(read(STDIN_FILENO, &current_keypress, 1) == 0) {
+        current_keypress = 0;
+    }
+}
+
+bool Terminal::pressed(char c) {
+    return this->current_keypress == c;
+}
+
+void Terminal::update() {
+    current_keypress = -1;
+    update_keypress();
+}
+
+
+
+void Terminal::reset_terminal() {
+    tcsetattr(0, TCSANOW, &originalTerminal);
+}
+
+std::pair<int, int> Terminal::get_cursor_position() {
     char buf[30] = {0};
     int ret, i, pow;
     char ch;
@@ -144,7 +215,6 @@ std::pair<int, int> graphics::Terminal::get_cursor_position() {
             return {-1, -1};
         }
         buf[i] = ch;
-        printf("buf[%d]: \t%c \t%d\n", i, ch, ch);
     }
 
     if (i < 2) {
@@ -163,18 +233,9 @@ std::pair<int, int> graphics::Terminal::get_cursor_position() {
     return {x, y};
 }
 
-std::pair<int, int> graphics::Terminal::get_dimensions() {
-    std::pair<int, int> startPos = get_cursor_position();
-    move_cursor_to(99999, 99999);
-    std::pair<int, int> dimensions = get_cursor_position();
-    move_cursor_to(startPos, false);
-    return dimensions;
+std::pair<int, int> Terminal::get_dimensions() {
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    return {w.ws_col, w.ws_row};
 }
-
-std::optional<char> graphics::Terminal::read_current_char() {
-    char c;
-    if (read(STDIN_FILENO, &c, 1) == -1) {
-        return {};
-    }
-    return {c};
 }

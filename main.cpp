@@ -1,23 +1,26 @@
+
 #include "lib/inputUtils.h"
-#include "src/gameloop.h"
-#include "src/graphics.h"
-#include "src/grid.h"
+#include "src/logging.h"
+#include <fstream>
 #include <unistd.h>
+// #define __DEBUG
 
 std::atomic<bool> quit(false);
 
-void got_signal(int) { quit.store(true); }
+extern std::ofstream tty;
 
 int main() {
     graphics::initialize_locales();
     Grid grid(9, 9, 10);
     graphics::Terminal terminal;
-    
-    auto keybind = gameloop::keybind_thread(&quit, &terminal);
+    gameloop::start_logging_thread(terminal);
     while (!quit.load()) {
         auto frame = grid.draw_grid();
-        terminal.draw(frame); 
+        terminal.draw(frame);
+        terminal.update_keypress();
+        quit.store(terminal.pressed('q'));
     }
-    keybind.join();
+
+
     return 0;
 }

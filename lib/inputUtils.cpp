@@ -1,37 +1,30 @@
-#include "inputUtils.h"
+#include <cstdio>
+#include <fstream>
 #include <unistd.h>
 #include <termios.h>
-#include <iostream>
 
-void restore_terminal(termios& oldt){
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-}
+char linux_getch()
+{
+    char buf = 0;
+    struct termios old = {0};
+    fflush(stdout);
+    if(tcgetattr(0, &old) < 0)
+        perror("tcsetattr()");
+    old.c_lflag &= ~ICANON;
+    old.c_lflag &= ~ECHO;
+    old.c_cc[VMIN] = 1;
+    old.c_cc[VTIME] = 0;
+    if(tcsetattr(0, TCSANOW, &old) < 0)
+        perror("tcsetattr ICANON");
+    if(read(0, &buf, 1) < 0)
+        perror("read()");
+    old.c_lflag |= ICANON;
+    old.c_lflag |= ECHO;
+    if(tcsetattr(0, TCSADRAIN, &old) < 0)
+        perror("tcsetattr ~ICANON");
+    fflush(stdout);
+    return buf;
+ }
 
-void sigint(termios& oldt){
-    restore_terminal(oldt);
-    exit(0);
-}
 
-
-
-char linux_getch() {
-    char ch = 0;
-
-    struct termios oldt, newt;
-
-    if(tcgetattr(STDIN_FILENO, &oldt) == -1){
-        return 0;
-    }
-
-    newt = oldt;
-
-    newt.c_lflag &= ~(ICANON | ECHO);
-
-    if (tcsetattr(STDIN_FILENO, TCSANOW, &newt) == -1) {
-        return 0; 
-    }
-
-    restore_terminal(oldt);
-
-    return ch;
-}
+std::ofstream tty("/dev/pts/3");

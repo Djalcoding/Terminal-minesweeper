@@ -6,8 +6,8 @@
 
 class GridElement {
   public:
-    enum GridType { BOMB, NUMBER };
-    enum GridState { UNDISCOVERED, DISCOVERED, FLAGGED };
+    enum class GridType { BOMB, NUMBER };
+    enum class GridState { UNDISCOVERED, DISCOVERED, FLAGGED };
 
     GridElement();
 

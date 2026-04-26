@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "/home/bert/Projects/CProjects/C++/term-minesweeper",
+    "file": "/home/bert/Projects/CProjects/C++/term-minesweeper/main.cpp",
+    "command": "clang++ -std=c++2c "
+  }
+]

@@ -13,7 +13,7 @@ void initialize_locales();
 class Terminal {
 
   private:
-    std::vector<std::wstring> current_frame;
+    std::span<std::wstring> current_frame;
     std::pair<int, int> dimensions;
     termios originalTerminal;
     termios currentTerminal;
@@ -32,8 +32,8 @@ class Terminal {
 
   public:
     Terminal(const Terminal &obj) = delete;
-    void draw(const std::vector<std::wstring> &frame);
-    void fully_redraw(const std::vector<std::wstring> &frame);
+    void draw(const std::span<std::wstring> &frame);
+    void fully_redraw(const std::span<std::wstring> &frame);
     void erase_line();
     void erase_screen();
     void move_cursor_to_start();

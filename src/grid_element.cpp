@@ -1,34 +1,42 @@
 #include "grid_element.h"
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 
+static const std::wstring rgb_color(unsigned char r, unsigned char g, unsigned char b) {
+    std::wstringstream ss;
+    ss << L"\e[38;2;" << (int)r << L";" << (int)g << L";" << (int)b << L"m";
+    return ss.str();
+}
 const std::wstring color_white = L"\e[1;37m";
+const std::wstring color_gray = rgb_color(189, 189, 189);
+const std::wstring color_dark_gray = rgb_color(128, 128, 128);
 const std::wstring color_background_white = L"\e[0;107m";
-const std::wstring color_green = L"\e[0;32m";
-const std::wstring color_blue = L"\e[1;94m";
-const std::wstring color_deep_blue = L"\e[0;34m";
-const std::wstring color_cyan = L"\e[0;36m";
-const std::wstring color_purple = L"\e[0;35m";
+const std::wstring color_green = rgb_color(62,189,21);
+const std::wstring color_blue = rgb_color(0, 0, 255);
+const std::wstring color_deep_blue = rgb_color(0, 0, 130);
+const std::wstring color_cyan = rgb_color(0, 128, 129);
+const std::wstring color_dark_red = rgb_color(135, 10, 0);
 const std::wstring color_black = L"\e[0;30m";
-const std::wstring color_red = L"\e[1;31m";
-const std::wstring color_high_red = L"\e[1;91m";
+const std::wstring color_red = rgb_color(253, 33, 18);
+const std::wstring color_high_red = rgb_color(255, 0, 0);
 
 const std::unordered_map<int, std::wstring> numbers_to_color_map = {
-    {0, color_black + L"■"},
+    {0, color_gray + L"■"},
     {1, color_blue + L"1"},
     {2, color_green + L"2"},
     {3, color_red + L"3"},
     {4, color_deep_blue + L"4"},
-    {5, color_purple + L"5"},
+    {5, color_dark_red + L"5"},
     {6, color_cyan + L"6"},
     {7, color_black + L"7"},
-    {8, color_background_white + L"8"},
+    {8, color_dark_gray + L"8"},
 };
 
 GridElement::GridElement()
-    : type(GridType::NUMBER), state(GridState::UNDISCOVERED), number({0}) {}
+    : type(GridType::NUMBER), state(GridState::DISCOVERED), number({0}) {}
 
 void GridElement::setNumber(int value) {
     if (type != GridType::NUMBER) {

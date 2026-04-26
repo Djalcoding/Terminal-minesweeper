@@ -37,7 +37,7 @@ void initialize_locales() {
 
 
 
-void Terminal::fully_redraw(const std::vector<std::wstring> &frame) {
+void Terminal::fully_redraw(const std::span<std::wstring> &frame) {
     erase_screen();
     move_cursor_to_start();
     for (const std::wstring &line : frame) {
@@ -46,7 +46,7 @@ void Terminal::fully_redraw(const std::vector<std::wstring> &frame) {
     }
     std::wcout << std::flush;
 }
-void Terminal::draw(const std::vector<std::wstring> &frame) {
+void Terminal::draw(const std::span<std::wstring> &frame) {
     std::pair<int, int> current_dimensions = get_dimensions();
     if (this->dimensions != current_dimensions) {
         this->dimensions = current_dimensions;

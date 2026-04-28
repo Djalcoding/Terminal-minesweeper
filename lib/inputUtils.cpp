@@ -27,4 +27,4 @@ char linux_getch()
  }
 
 
-std::ofstream tty("/dev/pts/3");
+std::ofstream tty("/dev/pts/4");

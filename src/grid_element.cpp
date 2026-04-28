@@ -24,7 +24,7 @@ const std::wstring color_red = rgb_color(253, 33, 18);
 const std::wstring color_high_red = rgb_color(255, 0, 0);
 
 const std::unordered_map<int, std::wstring> numbers_to_color_map = {
-    {0, color_gray + L"■"},
+    {0, color_gray + L"☑"},
     {1, color_blue + L"1"},
     {2, color_green + L"2"},
     {3, color_red + L"3"},
@@ -36,7 +36,7 @@ const std::unordered_map<int, std::wstring> numbers_to_color_map = {
 };
 
 GridElement::GridElement()
-    : type(GridType::NUMBER), state(GridState::DISCOVERED), number({0}) {}
+    : type(GridType::NUMBER), state(GridState::UNDISCOVERED), number({0}) {}
 
 void GridElement::setNumber(int value) {
     if (type != GridType::NUMBER) {

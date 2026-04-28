@@ -3,20 +3,22 @@
 #include <asm-generic/ioctls.h>
 #include <bits/types/struct_timeval.h>
 #include <cassert>
-#include <sys/ioctl.h>
+#include <cstddef>
 #include <fstream>
+#include <ios>
 #include <iostream>
+#include <iterator>
 #include <locale>
 #include <mutex>
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>
 #include <utility>
-#include <vector>
 
 extern std::ofstream tty;
 
@@ -35,9 +37,7 @@ void initialize_locales() {
 #endif
 }
 
-
-
-void Terminal::fully_redraw(const std::span<std::wstring> &frame) {
+void Terminal::fully_redraw(const std::vector<std::wstring> &frame) {
     erase_screen();
     move_cursor_to_start();
     for (const std::wstring &line : frame) {
@@ -46,7 +46,7 @@ void Terminal::fully_redraw(const std::span<std::wstring> &frame) {
     }
     std::wcout << std::flush;
 }
-void Terminal::draw(const std::span<std::wstring> &frame) {
+void Terminal::draw(const std::vector<std::wstring> &frame) {
     std::pair<int, int> current_dimensions = get_dimensions();
     if (this->dimensions != current_dimensions) {
         this->dimensions = current_dimensions;
@@ -55,9 +55,12 @@ void Terminal::draw(const std::span<std::wstring> &frame) {
     }
     bool moved_to_start = false;
     int jump_size = 0;
-    for (unsigned int i = 0; i < frame.size(); i++) {
-        if (this->current_frame.size() > i &&
-            this->current_frame[i] == frame[i]) {
+    size_t iteration_range = std::max(current_frame.size(), frame.size());
+    size_t iteration_lower_bound = std::min(current_frame.size(), frame.size());
+    for (unsigned int i = 0; i < iteration_range; i++) {
+        if (iteration_lower_bound > i &&
+            this->current_frame.at(i) == frame.at(i)) {
+            tty << i << '\n';
             jump_size++;
         } else {
             if (!moved_to_start) {
@@ -68,10 +71,10 @@ void Terminal::draw(const std::span<std::wstring> &frame) {
             if (jump_size > 0)
                 move_to_start_of_next_line(jump_size);
             erase_line();
-            std::wcout << frame[i];
-            jump_size = 0;
+            if (i < frame.size())
+                std::wcout << frame[i];
+            jump_size = 1;
         }
-        move_to_start_of_next_line();
     }
     this->current_frame = frame;
     std::wcout << std::flush;
@@ -87,26 +90,18 @@ void Terminal::move_to_start_of_next_line(unsigned int jump) {
 }
 
 void Terminal::erase_line() { std::wcout << "\033[2K" << std::flush; }
-void Terminal::erase_screen() {
-    std::wcout << "\033[2J" << std::flush;
-}
+void Terminal::erase_screen() { std::wcout << "\033[2J" << std::flush; }
 
 void Terminal::move_cursor_to_start() { move_cursor_to(1, 1); }
 
-void Terminal::hide_cursor() {
-    std::wcout << "\033[?25l" << std::flush;
-}
+void Terminal::hide_cursor() { std::wcout << "\033[?25l" << std::flush; }
 
-void Terminal::show_cursor() {
-    std::wcout << "\033[?25h" << std::flush;
-}
+void Terminal::show_cursor() { std::wcout << "\033[?25h" << std::flush; }
+void Terminal::set_box_cursor() {std::wcout << "\e[2 q" << std::flush;}
 
-void Terminal::move_cursor_to(int x, int y) {
-    move_cursor_to(x, y, false);
-}
+void Terminal::move_cursor_to(int x, int y) { move_cursor_to(x, y, false); }
 
-void Terminal::move_cursor_to(const std::pair<int, int> &pos,
-                                        bool show) {
+void Terminal::move_cursor_to(const std::pair<int, int> &pos, bool show) {
     move_cursor_to(pos.first, pos.second, show);
 }
 
@@ -135,7 +130,6 @@ void Terminal::set_canonic(bool state) {
     currentTerminal.c_lflag &= ~ICANON;
 }
 
-
 void Terminal::set_echo(bool state) {
     if (state) {
         currentTerminal.c_lflag |= ECHO;
@@ -144,13 +138,10 @@ void Terminal::set_echo(bool state) {
     currentTerminal.c_lflag &= ~ECHO;
 }
 
-void Terminal::set_vmin(unsigned char val) {
-    currentTerminal.c_cc[VMIN] = val;
-}
+void Terminal::set_vmin(unsigned char val) { currentTerminal.c_cc[VMIN] = val; }
 void Terminal::set_vtime(unsigned char val) {
     currentTerminal.c_cc[VTIME] = val;
 }
-
 
 std::string Terminal::get_terminal_information() {
     std::unique_lock<std::mutex> lock;
@@ -161,7 +152,8 @@ std::string Terminal::get_terminal_information() {
        << '\n'
        << "VMIN : " << ((int)currentTerminal.c_cc[VMIN]) << '\n'
        << "VTIME : " << ((int)currentTerminal.c_cc[VTIME]) << '\n'
-       << "Dimensions : " << dimensions.first << ", " << dimensions.second << '\n'
+       << "Dimensions : " << dimensions.first << ", " << dimensions.second
+       << '\n'
        << "Current char : " << current_keypress << '\n';
 
     return ss.str();
@@ -172,25 +164,19 @@ void Terminal::update_terminal_settings() {
 }
 
 void Terminal::update_keypress() {
-    if(read(STDIN_FILENO, &current_keypress, 1) == 0) {
+    if (read(STDIN_FILENO, &current_keypress, 1) == 0) {
         current_keypress = 0;
     }
 }
 
-bool Terminal::pressed(char c) {
-    return this->current_keypress == c;
-}
+bool Terminal::pressed(char c) { return this->current_keypress == c; }
 
 void Terminal::update() {
     current_keypress = -1;
     update_keypress();
 }
 
-
-
-void Terminal::reset_terminal() {
-    tcsetattr(0, TCSANOW, &originalTerminal);
-}
+void Terminal::reset_terminal() { tcsetattr(0, TCSANOW, &originalTerminal); }
 
 std::pair<int, int> Terminal::get_cursor_position() {
     char buf[30] = {0};
@@ -211,7 +197,6 @@ std::pair<int, int> Terminal::get_cursor_position() {
         ret = read(0, &ch, 1);
         if (!ret) {
             tcsetattr(0, TCSANOW, &restore);
-            fprintf(stderr, "getpos: error reading response!\n");
             return {-1, -1};
         }
         buf[i] = ch;
@@ -233,9 +218,11 @@ std::pair<int, int> Terminal::get_cursor_position() {
     return {x, y};
 }
 
+
+
 std::pair<int, int> Terminal::get_dimensions() {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     return {w.ws_col, w.ws_row};
 }
-}
+} // namespace graphics

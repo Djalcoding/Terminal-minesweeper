@@ -1,23 +1,21 @@
 #include "grid.h"
 #include "grid_element.h"
-#include <atomic>
-#include <cstddef>
 #include <string>
 #include <termios.h>
 #include <unistd.h>
-#include <vector>
-#pragma once
+#pragma once 
 
 namespace graphics {
 void initialize_locales();
 class Terminal {
 
   private:
-    std::span<std::wstring> current_frame;
+    std::vector<std::wstring> current_frame;
     std::pair<int, int> dimensions;
     termios originalTerminal;
     termios currentTerminal;
     char current_keypress;
+
     void update_terminal_settings();
     void set_canonic(bool);
     void set_echo(bool);
@@ -32,13 +30,14 @@ class Terminal {
 
   public:
     Terminal(const Terminal &obj) = delete;
-    void draw(const std::span<std::wstring> &frame);
-    void fully_redraw(const std::span<std::wstring> &frame);
+    void draw(const std::vector<std::wstring> &frame);
+    void fully_redraw(const std::vector<std::wstring> &frame);
     void erase_line();
     void erase_screen();
     void move_cursor_to_start();
     void hide_cursor();
     void show_cursor();
+    void set_box_cursor();
     void move_to_start_of_next_line();
     void move_to_start_of_next_line(unsigned int jump_size);
     void move_cursor_to(int x, int y);

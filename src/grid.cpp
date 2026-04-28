@@ -20,7 +20,7 @@ constexpr wchar_t top_caret = L'┳';
 constexpr wchar_t bottom_caret = L'┻';
 
 const std::wstring empty_space = L"\e[0;0m ";
-std::vector<std::wstring> Grid::draw_grid() {
+void Grid::updateGrid() {
     std::vector<std::wstring> output_grid;
     std::vector<GridElement> flattened_elements =
         vectorUtils::flatten(this->getGrid());
@@ -76,7 +76,7 @@ std::vector<std::wstring> Grid::draw_grid() {
         output_grid.push_back(output_string);
     }
 
-    return output_grid;
+    this->drawBuffer = output_grid;
 }
 
 void Grid::fillWithBombs(int bombCount) {
@@ -131,24 +131,22 @@ void Grid::incrementAroundBomb(int x, int y) {
     }
 }
 
-std::vector<std::vector<GridElement>> *Grid::getGrid() { return &this->grid; }
 
-int Grid::get_height() { return this->height; }
-
-int Grid::get_width() { return this->width; }
-
-bool Grid::discover(int x, int y) {
-    if(y >= grid.size() || y < 0 || x < 0 || x >= grid[0].size() || grid[y][x].discovered()) return false;
+bool Grid::discoverDfs(int x, int y) {
+    if (y >= grid.size() || y < 0 || x < 0 || x >= grid[0].size() ||
+        grid[y][x].discovered())
+        return false;
     this->grid[y][x].setState(GridElement::GridState::DISCOVERED);
-    if (grid[y][x].getNumber().has_value() && grid[y][x].getNumber().value() == 0) {
-        discover(x, y+1);
-        discover(x, y-1);
-        discover(x+1, y);
-        discover(x+1, y+1);
-        discover(x+1, y-1);
-        discover(x-1, y);
-        discover(x-1, y+1);
-        discover(x-1, y-1);
+    if (grid[y][x].getNumber().has_value() &&
+        grid[y][x].getNumber().value() == 0) {
+        discover(x, y + 1);
+        discover(x, y - 1);
+        discover(x + 1, y);
+        discover(x + 1, y + 1);
+        discover(x + 1, y - 1);
+        discover(x - 1, y);
+        discover(x - 1, y + 1);
+        discover(x - 1, y - 1);
     }
     return grid[y][x].isBomb();
 }

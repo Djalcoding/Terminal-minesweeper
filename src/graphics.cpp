@@ -37,7 +37,7 @@ void initialize_locales() {
 #endif
 }
 
-void Terminal::fully_redraw(const std::vector<std::wstring> &frame) {
+void Terminal::fully_redraw(const Frame &frame) {
     erase_screen();
     move_cursor_to_start();
     for (const std::wstring &line : frame) {
@@ -46,7 +46,7 @@ void Terminal::fully_redraw(const std::vector<std::wstring> &frame) {
     }
     std::wcout << std::flush;
 }
-void Terminal::draw(const std::vector<std::wstring> &frame) {
+void Terminal::draw(const Frame &frame) {
     std::pair<int, int> current_dimensions = get_dimensions();
     if (this->dimensions != current_dimensions) {
         this->dimensions = current_dimensions;
@@ -60,7 +60,6 @@ void Terminal::draw(const std::vector<std::wstring> &frame) {
     for (unsigned int i = 0; i < iteration_range; i++) {
         if (iteration_lower_bound > i &&
             this->current_frame.at(i) == frame.at(i)) {
-            tty << i << '\n';
             jump_size++;
         } else {
             if (!moved_to_start) {
@@ -71,8 +70,9 @@ void Terminal::draw(const std::vector<std::wstring> &frame) {
             if (jump_size > 0)
                 move_to_start_of_next_line(jump_size);
             erase_line();
-            if (i < frame.size())
+            if (i < frame.size()) {
                 std::wcout << frame[i];
+            }
             jump_size = 1;
         }
     }
@@ -169,7 +169,7 @@ void Terminal::update_keypress() {
     }
 }
 
-bool Terminal::pressed(char c) { return this->current_keypress == c; }
+bool Terminal::pressed(char c)const { return this->current_keypress == c; }
 
 void Terminal::update() {
     current_keypress = -1;

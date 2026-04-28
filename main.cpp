@@ -1,14 +1,14 @@
 
 #include "lib/inputUtils.h"
 #include "src/logging.h"
-#include <algorithm>
 #include <fstream>
 #include <unistd.h>
 #include "atomic"
+#include "src/command.h"
+#include "src/grid.h"
 // TODO : 
-// make a display biffer for the Grid so we don't remake a vector for everything.
-// make cursor displayed on the Grid. 
-// make a class for commands
+// Accept arrow keys for input
+// Add a background
 #define __DEBUG
 
 
@@ -22,36 +22,29 @@ int main() {
     graphics::Terminal terminal;
     int x = 0;
     int y = 0;
+    
+
+    const std::vector<command::command> commands = {
+        command::command({'h','a'},[&]()mutable{x--;}),
+        command::command({'l','d'},[&]()mutable{x++;}),
+        command::command({'k','w'},[&]()mutable{y--;}),
+        command::command({'s','j'},[&]()mutable{y++;})
+    };
+
 #ifdef __DEBUG    
     using namespace std::chrono_literals;
-    //gameloop::start_logging_thread(terminal,2000ms);
+    gameloop::start_logging_thread(terminal,2000ms);
 #endif
     while (!quit.load()) {
         auto frame = grid.getWString();
         terminal.update_keypress();
         terminal.draw(frame);
-        if(terminal.pressed('h')) {
-            x--;
-            x = std::clamp(x,0, 8);
-        }
-        if(terminal.pressed('l')) {
-            x++;
-            x = std::clamp(x,0, 8);
-        }
-        if(terminal.pressed('j')) {
-            y++;
-            y = std::clamp(y,0, 8);
-        }
-        if(terminal.pressed('k')) {
-            y--;
-            y = std::clamp(y,0, 8);
-        }
-        if(terminal.pressed('x')) {
-            grid.discover(x, y);
-        }
         quit.store(terminal.pressed('q'));
         terminal.show_cursor();
         terminal.set_box_cursor();
+        for (auto command: commands) {
+            command(terminal); 
+        }
         auto [xPos,yPos] = grid.getCursorPositionInGrid(x, y);
         terminal.move_cursor_to(xPos,yPos);
     }

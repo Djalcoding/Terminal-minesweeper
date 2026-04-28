@@ -1,5 +1,4 @@
-#include "grid.h"
-#include "grid_element.h"
+#include <vector>
 #include <string>
 #include <termios.h>
 #include <unistd.h>
@@ -8,9 +7,10 @@
 namespace graphics {
 void initialize_locales();
 class Terminal {
-
+public:
+    using Frame = std::vector<std::wstring>;
   private:
-    std::vector<std::wstring> current_frame;
+    Frame current_frame;
     std::pair<int, int> dimensions;
     termios originalTerminal;
     termios currentTerminal;
@@ -30,8 +30,8 @@ class Terminal {
 
   public:
     Terminal(const Terminal &obj) = delete;
-    void draw(const std::vector<std::wstring> &frame);
-    void fully_redraw(const std::vector<std::wstring> &frame);
+    void draw(const Frame &frame);
+    void fully_redraw(const Frame &frame);
     void erase_line();
     void erase_screen();
     void move_cursor_to_start();
@@ -50,7 +50,7 @@ class Terminal {
 
     std::pair<int, int> get_cursor_position();
     std::pair<int, int> get_dimensions();
-    bool pressed(char);
+    bool pressed(char) const;
     void enter_alternate_buffer();
     void exit_alternate_buffer();
 

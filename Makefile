@@ -1,10 +1,12 @@
-output: main.o graphics.o grid.o grid_element.o vectorUtils.o inputUtils.o logging.o
-	g++ main.o graphics.o grid.o grid_element.o vectorUtils.o inputUtils.o logging.o -std=c++2c -o output 
+output: main.o graphics.o grid.o grid_element.o vectorUtils.o inputUtils.o logging.o game_controller.o
+	g++ main.o graphics.o grid.o grid_element.o vectorUtils.o inputUtils.o logging.o game_controller.o -std=c++2c -o output 
 	./output
 main.o: main.cpp
 	g++ -c main.cpp -std=c++2c
 graphics.o: src/graphics.cpp src/graphics.h
 	g++ -c src/graphics.cpp -std=c++2c
+game_controller.o: src/game_controller.cpp src/game_controller.h
+	g++ -c src/game_controller.cpp -std=c++2c
 grid.o: src/grid.cpp src/grid.h
 	g++ -c src/grid.cpp -std=c++2c
 grid_element.o: src/grid_element.cpp src/grid_element.h

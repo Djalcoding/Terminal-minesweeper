@@ -131,14 +131,27 @@ void Grid::incrementAroundBomb(int x, int y) {
     }
 }
 
+void Grid::flag(int x, int y) {
+    GridElement& node = grid[y][x];
+    if (node.discovered()) {
+        return; 
+    }
+    if (node.flagged()) {
+        node.setState(GridElement::GridState::UNDISCOVERED); 
+    } else
+        node.setState(GridElement::GridState::FLAGGED);
+    updateGrid();
+}
+
 
 bool Grid::discoverDfs(int x, int y) {
+    GridElement& node = getNode(x,y);
     if (y >= grid.size() || y < 0 || x < 0 || x >= grid[0].size() ||
-        grid[y][x].discovered())
+        node.discovered())
         return false;
-    this->grid[y][x].setState(GridElement::GridState::DISCOVERED);
-    if (grid[y][x].getNumber().has_value() &&
-        grid[y][x].getNumber().value() == 0) {
+    node.setState(GridElement::GridState::DISCOVERED);
+    if (node.getNumber().has_value() &&
+        node.getNumber().value() == 0) {
         discover(x, y + 1);
         discover(x, y - 1);
         discover(x + 1, y);
@@ -148,5 +161,5 @@ bool Grid::discoverDfs(int x, int y) {
         discover(x - 1, y + 1);
         discover(x - 1, y - 1);
     }
-    return grid[y][x].isBomb();
+    return node.isBomb();
 }

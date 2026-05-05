@@ -12,6 +12,7 @@ struct command {
 
   public:
     command(std::initializer_list<char> keybinds, std::function<void()> callback) : keybinds(keybinds), callback(callback){}
+    command(char keybind, std::function<void()> callback) : keybinds({keybind}), callback(callback){}
 
 
     void operator() (const graphics::Terminal& terminal) {

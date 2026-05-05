@@ -63,8 +63,9 @@ bool GridElement::discovered() {
     return this->state == GridState::DISCOVERED;
 }
 bool GridElement::isBomb() { return this->type == GridType::BOMB; }
+bool GridElement::flagged() { return this->state == GridState::FLAGGED; }
 
-std::wstring GridElement::getSymbol() {
+const std::wstring GridElement::getSymbol() {
     if (this->state == GridState::UNDISCOVERED) {
         return color_white + L'■';
     } else if (this->state == GridState::FLAGGED) {

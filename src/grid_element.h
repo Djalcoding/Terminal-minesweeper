@@ -16,8 +16,9 @@ class GridElement {
     void setType(GridType type);
     void setState(GridState state);
     bool isBomb();
-    std::wstring getSymbol();
     bool discovered();
+    bool flagged();
+    const std::wstring getSymbol();
     std::optional<int> getNumber() { return number; }
 
   private:

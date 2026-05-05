@@ -101,65 +101,46 @@ void Grid::fillWithBombs(int bombCount) {
     }
 }
 
-void Grid::incrementAroundBomb(int x, int y) {
-    if (y > 0) {
-        this->grid[y - 1][x].incrementNumber();
-    }
-
-    if (y < this->height - 1) {
-        grid[y + 1][x].incrementNumber();
-    }
-
-    if (x > 0) {
-        this->grid[y][x - 1].incrementNumber();
-        if (y > 0) {
-            this->grid[y - 1][x - 1].incrementNumber();
-        }
-        if (y < this->height - 1) {
-            grid[y + 1][x - 1].incrementNumber();
-        }
-    }
-
-    if (x < this->width - 1) {
-        this->grid[y][x + 1].incrementNumber();
-        if (y > 0) {
-            this->grid[y - 1][x + 1].incrementNumber();
-        }
-        if (y < this->height - 1) {
-            grid[y + 1][x + 1].incrementNumber();
-        }
+void Grid::catchOoR(const int x, const int y) {
+    try {
+        getNode(x, y).incrementNumber();
+    } catch (std::out_of_range) {
     }
 }
 
+void Grid::incrementAroundBomb(int x, int y) {
+    catchOoR(x, y+1);
+    catchOoR(x+1, y+1);
+    catchOoR(x-1, y+1);
+    catchOoR(x, y-1);
+    catchOoR(x+1, y-1);
+    catchOoR(x-1, y-1);
+    catchOoR(x+1, y);
+    catchOoR(x-1, y);
+}
+
 void Grid::flag(int x, int y) {
-    GridElement& node = grid[y][x];
+    GridElement &node = grid[y][x];
     if (node.discovered()) {
-        return; 
+        return;
     }
     if (node.flagged()) {
-        node.setState(GridElement::GridState::UNDISCOVERED); 
+        node.setState(GridElement::GridState::UNDISCOVERED);
     } else
         node.setState(GridElement::GridState::FLAGGED);
     updateGrid();
 }
 
-
 bool Grid::discoverDfs(int x, int y) {
-    GridElement& node = getNode(x,y);
-    if (y >= grid.size() || y < 0 || x < 0 || x >= grid[0].size() ||
-        node.discovered())
+    if (!inBounds(x, y) || getNode(x, y).discovered())
         return false;
+    GridElement &node = getNode(x, y);
     node.setState(GridElement::GridState::DISCOVERED);
-    if (node.getNumber().has_value() &&
-        node.getNumber().value() == 0) {
-        discover(x, y + 1);
-        discover(x, y - 1);
-        discover(x + 1, y);
-        discover(x + 1, y + 1);
-        discover(x + 1, y - 1);
-        discover(x - 1, y);
-        discover(x - 1, y + 1);
-        discover(x - 1, y - 1);
+    if (node.getNumber().has_value() && node.getNumber().value() == 0) {
+        discoverDfs(x, y + 1);
+        discoverDfs(x, y - 1);
+        discoverDfs(x + 1, y);
+        discoverDfs(x - 1, y + 1);
     }
     return node.isBomb();
 }

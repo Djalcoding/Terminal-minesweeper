@@ -36,6 +36,9 @@ class Grid {
     std::vector<std::wstring> &getWString() { return drawBuffer; }
     int get_height() { return this->height; }
     int get_width() { return this->width; }
+    bool inBounds(const int x, const int y) {
+        return !(x < 0 || y <0 || y>= height || x >= width);
+    }
 
     std::pair<int, int> getCursorPositionInGrid(int x, int y) {
         return {
